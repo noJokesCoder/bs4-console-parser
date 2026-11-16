@@ -1,0 +1,117 @@
+# This is a sample Python script.
+import json
+
+import requests
+from bs4 import BeautifulSoup
+from typing import TypedDict
+
+# typing
+class EventData(TypedDict):
+    title: str
+    description: str
+    website: str
+    address: str
+
+class WebsiteData(TypedDict):
+    url: str
+    events: list[EventData]
+
+url_sources = [
+    # Epe
+    # 'https://vvvepe.nl/evenementen/maand',
+    'https://vvvepe.nl/zien-doen/attracties-bezienswaardigheden'
+]
+
+def preparation_script(name: str, sources: list[str]) -> None:
+    print(f'Hi, {name}')
+    print(f'This is a beautifulSoup project that scrapes URLs for fun events nearby!')
+    print(f'URL Sources: {len(sources)}')
+
+def make_soup(url: str) -> BeautifulSoup:
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/120.0.0.0 Safari/537.36"
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        return BeautifulSoup(response.content, 'html.parser')
+    except requests.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return BeautifulSoup("", 'html.parser')
+
+def parse_data(soup: BeautifulSoup) -> list[EventData]:
+    # This function will parse the BeautifulSoup object and extract relevant data
+    events: list[EventData] = []
+    event_list_el = []
+    script_tag = soup.find('script', id='__NEXT_DATA__')
+
+    # Process JSON data to extract event information
+    if script_tag is not None:
+        raw_data = script_tag.string
+
+        if raw_data is not None:
+            script_content = json.loads(raw_data)
+            event_list_el = script_content['props']['pageProps']['atracties']
+
+    if len(event_list_el) == 0 or not event_list_el:
+        print('Aborting mission: No events found on this page!')
+        return events
+
+    for event_data in event_list_el:
+        # Initialize the actual data!!
+        title = 'Untitled Event'
+        desc = 'No description available'
+        website = 'Unknown Website'
+        address = 'Unknown Address'
+
+        title_el = event_data.get('what', {}).get('title', {}).get('value', None)
+        desc_el = event_data.get('what', {}).get('shortdescription', {}).get('value', None)
+        address_el: str = f"{event_data['location']['street']} {event_data['location']['housenr']} {event_data['location']['zipcode']}, {event_data['location']['city'].capitalize()}"
+        website_el = None
+        contact_info = event_data.get('contactinformation')
+
+        # get the website!
+        if contact_info is not None and isinstance(contact_info, dict):
+            urls = contact_info.get('urls', [])
+            if urls and isinstance(urls, list) and len(urls) >= 1:
+                website_el = urls[0].get('value') if isinstance(urls[0], dict) else None
+
+        if title_el is not None:
+            title = title_el.strip()
+        if desc_el is not None:
+            desc = desc_el.strip()
+        if website_el is not None:
+            website = website_el.strip()
+        if address_el is not None:
+            address = address_el.strip()
+
+        events.append({'title': title, 'description': desc, 'website': website, 'address': address})
+
+    return events
+
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
+    result: list[WebsiteData] = []
+    preparation_script('Jeka', url_sources)
+
+    print('Scraping data from URLs...')
+    for url in url_sources:
+        print(f'Processing {url}...')
+        soup = make_soup(url)
+        events = parse_data(soup)
+        result.append({'url': url, 'events': events})
+
+    print('Scraping completed!')
+    print('Results:')
+    for website in result:
+        print(f"URL: {website['url']}")
+        for event in website['events']:
+            print(f"  Title: {event['title']}")
+            print(f"  Description: {event['description']}")
+            print(f"  Website: {event['website']}")
+            print(f"  Address: {event['address']}")
+            print('---')
+
+
+# See PyCharm help at https://www.jetbrains.com/help/pycharm/
