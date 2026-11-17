@@ -57,7 +57,7 @@ def parse_data_epe(soup: BeautifulSoup) -> list[EpeEventData]:
 
         if raw_data is not None:
             script_content = json.loads(raw_data)
-            print('CHECKUP')
+
             if 'atracties' in script_content['props']['pageProps']:
                 # for URL: 'https://vvvepe.nl/zien-doen/attracties-bezienswaardigheden'
                 event_list_el = script_content['props']['pageProps']['atracties']
