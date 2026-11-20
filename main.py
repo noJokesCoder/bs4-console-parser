@@ -101,8 +101,9 @@ def parse_data_epe(soup: BeautifulSoup) -> list[EpeEventData]:
 
     return events
 
-def process_epe_events():
+def process_epe_events() -> list[str]:
     result: list[EpeWebsiteData] = []
+    lines: list[str] = []
     url_sources = UrlSources().get_city('epe')
 
     print('Start processing events in Epe...')
@@ -119,16 +120,45 @@ def process_epe_events():
 
     for website in result:
         print(f"URL: {website['url']}")
+        lines.append(f"URL: {website['url']}\n")
         for event in website['events']:
+            # split the string into lines
+            lines.append(f"  Title: {event['title']}\n")
+            lines.append(f"  Description: {event['description']}\n")
+            lines.append(f"  Website: {event['website']}\n")
+            lines.append(f"  Address: {event['address']}\n")
+            # show result in console
             print(f"  Title: {event['title']}")
             print(f"  Description: {event['description']}")
             print(f"  Website: {event['website']}")
             print(f"  Address: {event['address']}")
             print('---')
 
-# Press the green button in the gutter to run the script.
+    return lines
+
+def write_file(text_lines: list[str]) -> None:
+    has_text = len(text_lines) > 0
+    try:
+        with open("events.txt", "x", encoding="utf-8") as file:
+            if has_text:
+                file.writelines(text_lines)
+            else:
+                file.write("Empty file \n")
+    except FileExistsError:
+        with open("events.txt", "w", encoding="utf-8") as file:
+            if has_text:
+                file.writelines(text_lines)
+            else:
+                file.write("Empty file \n")
+    finally:
+        print('Events saved' if has_text else 'Nothing to save to file...')
+
+
 if __name__ == '__main__':
     preparation_script('Jeka')
-    process_epe_events()
+    str_lines: list[str] = process_epe_events()
+    write_file(str_lines)
+
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
